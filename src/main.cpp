@@ -14,18 +14,43 @@ static bool isEnabled() {
     return Mod::get()->getSettingValue<bool>("reversed-inputs-enabled");
 }
 // swap push/release
-class $modify(MyPlayLayer, PlayLayer) {
-    void autoHold(PlayerObject* p) {
+class $modify(MyPlayerObject, PlayerObject) {
+    struct Fields {
+        bool skip = false;
+    };
+    bool pushButton(PlayerButton btn) {
+        if (!isEnabled() || m_fields->skip || (m_isPlatformer && (btn == PlayerButton::Left || btn == PlayerButton::Right)))
+            return PlayerObject::pushButton(btn);
+        // player press = release
+        m_fields->skip = true;
+        bool r = PlayerObject::releaseButton(btn);
+        m_fields->skip = false;
+        return r;
+    }
+    bool releaseButton(PlayerButton btn) {
+        if (!isEnabled() || m_fields->skip || (m_isPlatformer && (btn == PlayerButton::Left || btn == PlayerButton::Right)))
+            return PlayerObject::releaseButton(btn);
+        // player release = press
+        m_fields->skip = true;
+        bool r = PlayerObject::pushButton(btn);
+        m_fields->skip = false;
+        return r;
+    }
+
+    static void forceHold(PlayerObject* p) {
         if (!p) return;
-        auto* mp = static_cast<MyPlayerObject*>(typeinfo_cast<PlayerObject*>(p));
-        if (!mp) return;
+        auto* mp = static_cast<MyPlayerObject*>(p);
         mp->m_fields->skip = true;
         mp->PlayerObject::pushButton(PlayerButton::Jump);
         mp->m_fields->skip = false;
     }
+};
+
+// force hold state at level start so the player isn't just hanging(SAYORI REFERENCE!?!?) there
+class $modify(MyPlayLayer, PlayLayer) {
     void doAutoHold(float) {
-        if (m_player1) autoHold(m_player1);
-        if (m_gameState.m_isDualMode && m_player2) autoHold(m_player2);
+        if (m_player1) MyPlayerObject::forceHold(m_player1);
+        if (m_gameState.m_isDualMode && m_player2) MyPlayerObject::forceHold(m_player2);
         this->unschedule(schedule_selector(MyPlayLayer::doAutoHold));
     }
     bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
@@ -38,34 +63,10 @@ class $modify(MyPlayLayer, PlayLayer) {
 
         // warn the player
         Notification::create(
-            "Reversed Inputs is ON! just warning tho", NotificationIcon::Warning)->show(); return true;
-    }
-};
-// force hold state at level start so the player isn't just hanging(SAYORI REFERENCE!?!?) there
-class $modify(MyPlayLayer, PlayLayer) {
-    void autoHold(PlayerObject* p) {
-        if (!p) return;
-        auto* mp = static_cast<MyPlayerObject*>(typeinfo_cast<PlayerObject*>(p));
-        if (!mp) return;
-        mp->m_fields->skip = true;
-        mp->PlayerObject::pushButton(PlayerButton::Jump);
-        mp->m_fields->skip = false;
-    }
-    bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
-        if (!PlayLayer::init(level, useReplay, dontCreateObjects))
-            return false;
-        if (!isEnabled())
-            return true;
-
-        CCScheduler::get()->scheduleOnce([this](float) {
-            if (!m_player1) return;
-            autoHold(m_player1);
-            if (m_gameState.m_isDualMode && m_player2)
-                autoHold(m_player2);
-        }, this, 0.f, "reversed-inputs-autohold");
-
-    // warn the player
-        Notification::create("Reversed Inputs is ON! just warning tho", NotificationIcon::Warning)->show(); return true;
+            "Reversed Inputs is ON! just warning tho",
+            NotificationIcon::Warning
+        )->show();
+        return true;
     }
 };
 
