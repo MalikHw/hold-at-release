@@ -30,5 +30,11 @@
             "default": "F4",
             "category": "gameplay"
         }
+    },
+    "dependencies": {
+        "eclipse.eclipse-menu": {
+            "version": ">=v1.9.0",
+            "required": false
+        }
     }
 }
