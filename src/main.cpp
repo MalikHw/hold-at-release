@@ -3,6 +3,8 @@
 #include <Geode/loader/SettingV3.hpp>
 #include <eclipse.eclipse-menu/include/components.hpp>
 #include <eclipse.eclipse-menu/include/config.hpp>
+#include <Geode/modify/PlayerObject.hpp>
+#include <Geode/modify/PlayLayer.hpp>
 
 using namespace geode::prelude;
 
