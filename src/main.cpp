@@ -14,27 +14,31 @@ static bool isEnabled() {
     return Mod::get()->getSettingValue<bool>("reversed-inputs-enabled");
 }
 // swap push/release
-class $modify(MyPlayerObject, PlayerObject) {
-    struct Fields {
-        bool skip = false;
-    };
-    bool pushButton(PlayerButton btn) {
-        if (!isEnabled() || m_fields->skip || (m_isPlatformer && (btn == PlayerButton::Left || btn == PlayerButton::Right)))
-            return PlayerObject::pushButton(btn);
-        // player press = release
-        m_fields->skip = true;
-        bool r = PlayerObject::releaseButton(btn);
-        m_fields->skip = false;
-        return r;
+class $modify(MyPlayLayer, PlayLayer) {
+    void autoHold(PlayerObject* p) {
+        if (!p) return;
+        auto* mp = static_cast<MyPlayerObject*>(typeinfo_cast<PlayerObject*>(p));
+        if (!mp) return;
+        mp->m_fields->skip = true;
+        mp->PlayerObject::pushButton(PlayerButton::Jump);
+        mp->m_fields->skip = false;
     }
-    bool releaseButton(PlayerButton btn) {
-        if (!isEnabled() || m_fields->skip || (m_isPlatformer && (btn == PlayerButton::Left || btn == PlayerButton::Right)))
-            return PlayerObject::releaseButton(btn);
-        // player release = press
-        m_fields->skip = true;
-        bool r = PlayerObject::pushButton(btn);
-        m_fields->skip = false;
-        return r;
+    void doAutoHold(float) {
+        if (m_player1) autoHold(m_player1);
+        if (m_gameState.m_isDualMode && m_player2) autoHold(m_player2);
+        this->unschedule(schedule_selector(MyPlayLayer::doAutoHold));
+    }
+    bool init(GJGameLevel* level, bool useReplay, bool dontCreateObjects) {
+        if (!PlayLayer::init(level, useReplay, dontCreateObjects))
+            return false;
+        if (!isEnabled())
+            return true;
+
+        this->schedule(schedule_selector(MyPlayLayer::doAutoHold), 0.f);
+
+        // warn the player
+        Notification::create(
+            "Reversed Inputs is ON! just warning tho", NotificationIcon::Warning)->show(); return true;
     }
 };
 // force hold state at level start so the player isn't just hanging(SAYORI REFERENCE!?!?) there
