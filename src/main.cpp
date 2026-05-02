@@ -4,7 +4,10 @@
 #include <Geode/modify/PlayerObject.hpp>
 #include <Geode/modify/PlayLayer.hpp>
 
-#include <eclipse.eclipse-menu/include/eclipse.hpp>
+#include <eclipse.eclipse-menu/include/components.hpp>
+#include <eclipse.eclipse-menu/include/config.hpp>
+#include <eclipse.eclipse-menu/include/labels.hpp>
+#include <eclipse.eclipse-menu/include/modules.hpp>
 
 using namespace geode::prelude;
 
@@ -32,11 +35,12 @@ class $modify(MyPlayerObject, PlayerObject) {
     };
 
     bool isAffectedByMod() const {
+        auto* gjbgl = GJBaseGameLayer::get();
+        if (!gjbgl || !gjbgl->m_player1) return false;
         auto* pl = PlayLayer::get();
-        if (!pl || !pl->m_player1) return false;
-        if (pl->m_isPracticeMode && !allowedInPractice()) return false;
-        if (this == pl->m_player1) return affectsPlayer1();
-        if (pl->m_gameState.m_isDualMode && this == pl->m_player2) return affectsPlayer2();
+        if (pl && pl->m_isPracticeMode && !allowedInPractice()) return false;
+        if (this == gjbgl->m_player1) return affectsPlayer1();
+        if (gjbgl->m_gameState.m_isDualMode && this == gjbgl->m_player2) return affectsPlayer2();
         return false;
     }
 
@@ -116,10 +120,10 @@ $on_game(Loaded) {
 
         // if toggled off mid-level, release any forced hold so players aren't stuck
         if (!newVal) {
-            auto* pl = PlayLayer::get();
-            if (pl) {
-                if (pl->m_player1) MyPlayerObject::forceRelease(pl->m_player1);
-                if (pl->m_gameState.m_isDualMode && pl->m_player2) MyPlayerObject::forceRelease(pl->m_player2);
+            auto* gjbgl = GJBaseGameLayer::get();
+            if (gjbgl) {
+                if (gjbgl->m_player1) MyPlayerObject::forceRelease(gjbgl->m_player1);
+                if (gjbgl->m_gameState.m_isDualMode && gjbgl->m_player2) MyPlayerObject::forceRelease(gjbgl->m_player2);
             }
         }
     });
@@ -140,10 +144,10 @@ $on_game(Loaded) {
             Mod::get()->setSettingValue("reversed-inputs-enabled", val);
             // if toggled off mid-level, release any forced hold so players aren't stuck
             if (!val) {
-                auto* pl = PlayLayer::get();
-                if (pl) {
-                    if (pl->m_player1) MyPlayerObject::forceRelease(pl->m_player1);
-                    if (pl->m_gameState.m_isDualMode && pl->m_player2) MyPlayerObject::forceRelease(pl->m_player2);
+                auto* gjbgl = GJBaseGameLayer::get();
+                if (gjbgl) {
+                    if (gjbgl->m_player1) MyPlayerObject::forceRelease(gjbgl->m_player1);
+                    if (gjbgl->m_gameState.m_isDualMode && gjbgl->m_player2) MyPlayerObject::forceRelease(gjbgl->m_player2);
                 }
             }
         }).setDescription("Hold to do nothing, tap to jump.");
